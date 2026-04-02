@@ -15,6 +15,7 @@ Apply migrations in this order:
    - `legal_source`, `legal_obligation`, `control_definition`, `rule_set`, `rule_version`, `decision_execution`, `decision_exception`
 7. Create WTTA/register/remediation/audit tables:
    - `wtta_subject`, `wtta_status_history`, `inlener_borrowed_worker_register`, `remediation_case`, `audit_event`
-8. Create indexes (BTREE + GIN).
+8. Apply temporal hardening constraints (GiST exclusion constraints).
+9. Create indexes (BTREE + GIN).
 
 Because all objects are included in `db/001_initial_payroll_compliance_schema.sql`, this ordering is encoded directly in that file.

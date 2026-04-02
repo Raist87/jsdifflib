@@ -1,4 +1,5 @@
 BEGIN;
+CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 -- =========================================================
 -- 1) ENUM TYPES
@@ -151,8 +152,8 @@ CREATE TABLE assignment (
     client_id uuid NOT NULL REFERENCES client(client_id),
     site_id uuid REFERENCES client_site(site_id),
     contract_id uuid REFERENCES employment_contract(contract_id),
-    supplier_entity_id uuid REFERENCES legal_entity(legal_entity_id),
-    job_profile_id uuid REFERENCES client_job_profile(client_job_profile_id),
+    supplier_legal_entity_id uuid NOT NULL REFERENCES legal_entity(legal_entity_id),
+    client_job_profile_id uuid NOT NULL REFERENCES client_job_profile(client_job_profile_id),
     start_date date NOT NULL,
     end_date date,
     planned_hours_per_week numeric(7,2),
@@ -381,7 +382,7 @@ CREATE TABLE inlener_borrowed_worker_register (
     client_id uuid NOT NULL REFERENCES client(client_id),
     assignment_id uuid NOT NULL REFERENCES assignment(assignment_id),
     worker_id uuid NOT NULL REFERENCES worker(worker_id),
-    supplier_entity_id uuid REFERENCES legal_entity(legal_entity_id),
+    supplier_legal_entity_id uuid NOT NULL REFERENCES legal_entity(legal_entity_id),
     borrowed_from_date date NOT NULL,
     borrowed_to_date date,
     record_status status_generic NOT NULL DEFAULT 'active',
@@ -413,6 +414,41 @@ CREATE TABLE audit_event (
 );
 
 -- =========================================================
+-- 7b) TEMPORAL HARDENING (NO OVERLAPPING VALIDITY WINDOWS)
+-- =========================================================
+ALTER TABLE employment_contract
+    ADD CONSTRAINT ex_employment_contract_no_overlap
+    EXCLUDE USING gist (
+        worker_id WITH =,
+        legal_entity_id WITH =,
+        daterange(start_date, COALESCE(end_date, 'infinity'::date), '[]') WITH &&
+    );
+
+ALTER TABLE assignment
+    ADD CONSTRAINT ex_assignment_no_overlap
+    EXCLUDE USING gist (
+        worker_id WITH =,
+        client_id WITH =,
+        daterange(start_date, COALESCE(end_date, 'infinity'::date), '[]') WITH &&
+    );
+
+ALTER TABLE client_job_profile
+    ADD CONSTRAINT ex_client_job_profile_code_no_overlap
+    EXCLUDE USING gist (
+        client_id WITH =,
+        job_code_client WITH =,
+        daterange(effective_from, COALESCE(effective_to, 'infinity'::date), '[]') WITH &&
+    );
+
+ALTER TABLE client_package
+    ADD CONSTRAINT ex_client_package_name_no_overlap
+    EXCLUDE USING gist (
+        client_id WITH =,
+        package_name WITH =,
+        daterange(effective_from, COALESCE(effective_to, 'infinity'::date), '[]') WITH &&
+    );
+
+-- =========================================================
 -- 8) INDEXES
 -- =========================================================
 CREATE INDEX idx_legal_entity_tenant_id ON legal_entity (tenant_id);
@@ -422,7 +458,8 @@ CREATE INDEX idx_worker_tenant_id ON worker (tenant_id);
 CREATE INDEX idx_assignment_worker_id ON assignment (worker_id);
 CREATE INDEX idx_assignment_client_id ON assignment (client_id);
 CREATE INDEX idx_assignment_contract_id ON assignment (contract_id);
-CREATE INDEX idx_assignment_job_profile_id ON assignment (job_profile_id);
+CREATE INDEX idx_assignment_supplier_legal_entity_id ON assignment (supplier_legal_entity_id);
+CREATE INDEX idx_assignment_client_job_profile_id ON assignment (client_job_profile_id);
 CREATE INDEX idx_assignment_start_end ON assignment (start_date, end_date);
 
 CREATE INDEX idx_timesheet_assignment_id ON timesheet (assignment_id);
@@ -446,6 +483,7 @@ CREATE INDEX idx_remediation_case_execution_id ON remediation_case (decision_exe
 CREATE INDEX idx_wtta_subject_legal_entity_id ON wtta_subject (legal_entity_id);
 CREATE INDEX idx_wtta_status_history_subject_id ON wtta_status_history (wtta_subject_id);
 CREATE INDEX idx_inlener_assignment_id ON inlener_borrowed_worker_register (assignment_id);
+CREATE INDEX idx_inlener_supplier_legal_entity_id ON inlener_borrowed_worker_register (supplier_legal_entity_id);
 CREATE INDEX idx_audit_event_entity ON audit_event (entity_type, entity_id);
 CREATE INDEX idx_audit_event_trace ON audit_event (trace_id);
 
