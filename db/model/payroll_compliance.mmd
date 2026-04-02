@@ -1,0 +1,28 @@
+erDiagram
+    TENANT ||--o{ LEGAL_ENTITY : owns
+    TENANT ||--o{ CLIENT : owns
+    TENANT ||--o{ WORKER : owns
+    TENANT ||--o{ PAYROLL_PERIOD : owns
+
+    LEGAL_ENTITY ||--o{ EMPLOYMENT_CONTRACT : employs
+    LEGAL_ENTITY ||--o{ ASSIGNMENT : supplies
+
+    CLIENT ||--o{ CLIENT_SITE : has
+    CLIENT ||--o{ CLIENT_JOB_PROFILE : defines
+    CLIENT ||--o{ CLIENT_PACKAGE : publishes
+    CLIENT ||--o{ ASSIGNMENT : receives
+
+    WORKER ||--o{ EMPLOYMENT_CONTRACT : has
+    WORKER ||--o{ ASSIGNMENT : assigned
+
+    CLIENT_JOB_PROFILE ||--o{ CLIENT_PACKAGE : priced_by
+    CLIENT_PACKAGE ||--o{ CLIENT_PACKAGE_COMPONENT : contains
+    COMPENSATION_COMPONENT_TYPE ||--o{ CLIENT_PACKAGE_COMPONENT : typed_as
+
+    ASSIGNMENT ||--o{ TIMESHEET : has
+    TIMESHEET ||--o{ TIME_ENTRY : contains
+
+    PAYROLL_PERIOD ||--o{ PAYROLL_RUN : has
+    PAYROLL_RUN ||--o{ PAYROLL_RESULT : produces
+    ASSIGNMENT ||--o{ PAYROLL_RESULT : results_in
+    PAYROLL_RESULT ||--o{ PAY_LINE : contains
